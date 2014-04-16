@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using PredType.Utils;
 
 namespace BilingPredType
 {
@@ -85,9 +88,16 @@ namespace BilingPredType
             //Console.WriteLine("Done");
 
 
-            doForLangPair("de", "en");
+            //string s = "aaa bbb ccc ddd eee fff|ggg hhh";
 
-            //doForLangPair("fr", "en");
+            //foreach (Sequence sequence in s.CollectAllSubsetsOfN(4))
+            //{
+            //    Console.WriteLine(sequence.Text);
+            //}
+
+            //doForLangPair("en", "de");
+
+            doForLangPair("en", "fr");
 
             //doForLangPair("en", "es");
 
@@ -96,6 +106,8 @@ namespace BilingPredType
             //tryDict(@"h:\temp\predtype\en-fr\Europarl.en-fr.en.train", @"h:\temp\predtype\en-fr\Europarl.en-fr.fr.train", @"h:\temp\predtype\en-fr\try-db.dat", @"h:\temp\predtype\en-fr\lookup-output.txt");
 
             Console.WriteLine("Done.");
+
+            Application.SetSuspendState(PowerState.Suspend, true, true);
 
             Console.ReadKey();
         }
@@ -111,7 +123,7 @@ namespace BilingPredType
 
             string dbPath = Path.Combine(folder, "db.dat");
 
-            string resultPath = Path.Combine(folder, "result-w-" + src + "-" + trg + "-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss") + ".csv");
+            string resultPath = Path.Combine(folder, "result-allsubset4-" + src + "-" + trg + "-" + DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss") + ".csv");
 
             //var measurements = new List<Measurement>();
 
@@ -140,6 +152,8 @@ namespace BilingPredType
                     Console.WriteLine("Training finished.");
 
                     measurement.TrainTime = sw.Elapsed;
+                    measurement.SrcEntryCount = e.Dictionary.ItemCount;
+                    measurement.AllEntryCount = (ulong)e.Dictionary.DictItems.SelectMany(di => di.PossibleTranslations).Count();
 
                     e.Save(dbPath);
                     measurement.DbSizeInKb = new FileInfo(dbPath).Length/1024;
@@ -170,10 +184,10 @@ namespace BilingPredType
             using (var wrt = new StreamWriter(path, true, Encoding.UTF8))
             {
                 if (writeHeader)
-                    wrt.WriteLine("MinThreshold;MinScore;TrainTime;EvalTime;EvalSentenceCnt;AvgSentenceLength;AvgKeyStrokeSave;AvgCoverage;DbSizeInKb");
+                    wrt.WriteLine("MinThreshold;MinScore;TrainTime;EvalTime;EvalSentenceCnt;AvgSentenceLength;AvgKeyStrokeSave;AvgCoverage;DbSizeInKb;DbSrcEntryCount;DbAllEntryCount");
 
                 wrt.WriteLine(
-                        "{0};{1};{2};{3};{4};{5};{6};{7};{8}",
+                        "{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10}",
                         m.MinThreshold,
                         m.MinScore,
                         m.TrainTime.ToString("mm\\:ss"),
@@ -182,7 +196,9 @@ namespace BilingPredType
                         m.EvalResult.AvgSentenceLength,
                         m.EvalResult.AvgKeyStrokeSave,
                         m.EvalResult.AvgCoverage,
-                        m.DbSizeInKb);
+                        m.DbSizeInKb,
+                        m.SrcEntryCount,
+                        m.AllEntryCount);
             }
         }
 
@@ -247,5 +263,9 @@ namespace BilingPredType
         public EvalResult EvalResult;
 
         public long DbSizeInKb;
+
+        public ulong SrcEntryCount;
+
+        public ulong AllEntryCount;
     }
 }

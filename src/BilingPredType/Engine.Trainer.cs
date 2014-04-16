@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -77,27 +78,15 @@ namespace BilingPredType
 
                 Task.WaitAll(tSrc, tTrg);
                 
-                //using (var srcReader = new StreamReader(srcPath, Encoding.UTF8))
-                //using (var trgReader = new StreamReader(trgPath, Encoding.UTF8))
-                //{
-                //    lineCnt = 0;
-                //    srcCounter = new Dictionary<Sequence, int>();
-                //    trgCounter = new Dictionary<Sequence, int>();
-                //    togetherCounter = new Dictionary<SequencePair, int>();
+                GC.Collect();
 
-                //    string srcLine, trgLine;
-
-                //    while ((srcLine = srcReader.ReadLine()) != null &&
-                //           (trgLine = trgReader.ReadLine()) != null)
-                //    {
-                //        lineCnt++;
-
-                //        processLinePairForSequences(srcLine, trgLine);
-                //    }
-                //}
-
+                Console.WriteLine("Gyűjtés kész, ritkák szűrése");
 
                 filterRare();
+
+                GC.Collect();
+
+                Console.WriteLine("Együttes előfordulás elkezdése");
 
                 // együttes előfordulások számolása
                 togetherCounter = new Dictionary<SequencePair, int>();
@@ -140,8 +129,8 @@ namespace BilingPredType
 
             private void processLineForSequences(string line, Dictionary<Sequence, int> counter)
             {
-                //Sequence[] sequences = line.CollectSequences();
-                Sequence[] sequences = line.CollectWords();
+                Sequence[] sequences = line.CollectAllSubsetsOfN(4);
+                //Sequence[] sequences = line.CollectWords();
                 foreach (Sequence sequence in sequences)
                 {
                     if (!counter.ContainsKey(sequence))
@@ -184,10 +173,10 @@ namespace BilingPredType
 
             private void processLinePairForCorrelation(string srcLine, string trgLine)
             {
-                //Sequence[] srcSequences = srcLine.CollectSequences();
-                //Sequence[] trgSequences = trgLine.CollectSequences();
-                Sequence[] srcSequences = srcLine.CollectWords();
-                Sequence[] trgSequences = trgLine.CollectWords();
+                Sequence[] srcSequences = srcLine.CollectAllSubsetsOfN(4);
+                Sequence[] trgSequences = trgLine.CollectAllSubsetsOfN(4);
+                //Sequence[] srcSequences = srcLine.CollectWords();
+                //Sequence[] trgSequences = trgLine.CollectWords();
 
                 foreach (Sequence srcSequence in srcSequences)
                 {
@@ -195,7 +184,8 @@ namespace BilingPredType
                     {
                         if (srcCounter.ContainsKey(srcSequence) && trgCounter.ContainsKey(trgSequence))
                         {
-                            SequencePair pair = new SequencePair(srcSequence, trgSequence);
+                            // ez egy fájdalmas sor
+                            SequencePair pair = SequencePair.GetOrCreate(srcSequence, trgSequence);
                             if (togetherCounter.ContainsKey(pair))
                                 togetherCounter[pair]++;
                             else
@@ -239,7 +229,7 @@ namespace BilingPredType
                 {
                     foreach (Sequence trgSequence in trgCounter.Keys)
                     {
-                        var pair = new SequencePair(srcSequence, trgSequence);
+                        var pair = SequencePair.GetOrCreate(srcSequence, trgSequence);
 
                         int n11;
 
@@ -295,39 +285,75 @@ namespace BilingPredType
 
                 public Sequence TrgSequence { get; private set; }
 
-                public SequencePair(Sequence srcSequence, Sequence trgSequence)
+                private SequencePair(Sequence srcSequence, Sequence trgSequence)
                 {
                     SrcSequence = srcSequence;
                     TrgSequence = trgSequence;
+                    unchecked
+                    {
+                        hash = ((SrcSequence != null ? SrcSequence.GetHashCode() : 0) * 397) ^ (TrgSequence != null ? TrgSequence.GetHashCode() : 0);
+                    }
+                    
                 }
 
-                protected bool Equals(SequencePair other)
+                private static Dictionary<int, List<SequencePair>> pairs = new Dictionary<int, List<SequencePair>>();
+
+                public static SequencePair GetOrCreate(Sequence src, Sequence trg)
+                {
+                    unchecked
+                    {
+                        int hash = ((src != null ? src.GetHashCode() : 0) * 397) ^ (trg != null ? trg.GetHashCode() : 0);
+                        List<SequencePair> pairList;
+                        SequencePair result;
+                        if (pairs.TryGetValue(hash, out pairList))
+                        {
+                            result = pairList.SingleOrDefault(p => p.SrcSequence.Equals(src) && p.TrgSequence.Equals(trg));
+                            if (result == null)
+                            {
+                                result = new SequencePair(src, trg);
+                                pairList.Add(result);
+                            }
+                        }
+                        else
+                        {
+                            pairList = new List<SequencePair>();
+                            result = new SequencePair(src, trg);
+                            pairList.Add(result);
+                            pairs.Add(hash, pairList);
+                        }
+
+                        return result;
+                    }
+                    
+                }
+
+                public bool Equals(SequencePair other)
                 {
                     return SrcSequence.Equals(other.SrcSequence) && TrgSequence.Equals(other.TrgSequence);
                 }
 
                 public override bool Equals(object obj)
                 {
-                    if (ReferenceEquals(null, obj)) return false;
-                    if (ReferenceEquals(this, obj)) return true;
+                    //if (ReferenceEquals(null, obj)) return false;
+                    //if (ReferenceEquals(this, obj)) return true;
                     //if (obj.GetType() != this.GetType()) return false;
                     return Equals((SequencePair)obj);
                 }
 
-                private bool hashCalculated = false;
-                private int hash;
+                //private bool hashCalculated;
+                private readonly int hash;
 
                 public override int GetHashCode()
                 {
-                    if (hashCalculated)
+                    //if (hashCalculated)
                         return hash;
 
-                    unchecked
-                    {
-                        hash = ((SrcSequence != null ? SrcSequence.GetHashCode() : 0) * 397) ^ (TrgSequence != null ? TrgSequence.GetHashCode() : 0);
-                        hashCalculated = true;
-                        return hash;
-                    }
+                    //unchecked
+                    //{
+                    //    hash = ((SrcSequence != null ? SrcSequence.GetHashCode() : 0) * 397) ^ (TrgSequence != null ? TrgSequence.GetHashCode() : 0);
+                    //    hashCalculated = true;
+                    //    return hash;
+                    //}
                 }
             }
         }

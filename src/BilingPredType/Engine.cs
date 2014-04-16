@@ -15,6 +15,8 @@ namespace BilingPredType
     {
         private readonly BilingPredDict dict;
 
+        public BilingPredDict Dictionary { get { return dict; } }
+
         private Dictionary<int, DictItem> lookupDict; 
 
         private Engine(BilingPredDict dict)
@@ -130,7 +132,7 @@ namespace BilingPredType
 
         public LookupHit[] Lookup(string srcText)
         {
-            Sequence[] sequences = srcText.CollectSequences();
+            Sequence[] sequences = srcText.CollectAllSubsetsOfN(4);
             //Sequence[] sequences = srcText.CollectWords();
 
             var result = new Dictionary<string, LookupHit>();

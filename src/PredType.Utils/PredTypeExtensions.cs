@@ -42,7 +42,7 @@ namespace PredType.Utils
                         if (!result.ContainsKey(bigram))
                             result.Add(bigram, new Sequence(bigram, 2));
                     }
-                    
+
                     if (trigram != null)
                     {
                         //var s3 = new Sequence(trigram, 3);
@@ -75,6 +75,93 @@ namespace PredType.Utils
 
                     if (!result.ContainsKey(word))
                         result.Add(word, new Sequence(word, 1));
+                }
+            }
+
+            return result.Values.ToArray();
+        }
+
+        // n szóig bezárolag (vagyis n-nél kevesebb szóból állókat is kigyűjti)
+        public static Sequence[] CollectNGrams(this string line, int n)
+        {
+            var result = new Dictionary<string, Sequence>();
+
+            // először a biztos kifejezéshatárok mentén darabolok ( | karakter)
+            string[] innerStrings = line.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string innerString in innerStrings)
+            {
+                string[] words = innerString.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries); // note: regular expression could be better...
+
+                for (int i = 0; i < words.Length; i++)
+                {
+                    string word = words[i];
+
+                    if (!result.ContainsKey(word))
+                        result.Add(word, new Sequence(word, 1));
+
+                    var gramBuilder = new StringBuilder(word);
+                    for (int j = i-1; j >= 0 && j >= (i-n+1); j--)
+                    {
+                        gramBuilder.Insert(0, words[j] + " ");
+                        string gram = gramBuilder.ToString();
+                        if (!result.ContainsKey(gram))
+                        {
+                            result.Add(gram, new Sequence(gram, i-j+1));
+                        }
+                    }
+                }
+            }
+
+            return result.Values.ToArray();
+        }
+
+        // n-es csúszóablakból az összes részhalmazt képzi
+        public static Sequence[] CollectAllSubsetsOfN(this string line, int n)
+        {
+            var result = new Dictionary<string, Sequence>();
+
+            // először a biztos kifejezéshatárok mentén darabolok ( | karakter)
+            string[] innerStrings = line.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string innerString in innerStrings)
+            {
+                string[] words = innerString.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries); // note: regular expression could be better...
+
+                var wordWindow = new List<string>(n);
+
+                for (int i = 0; i < words.Length; i++)
+                {
+                    wordWindow.Clear();
+
+                    int upperBound = i;
+                    int lowerBound = Math.Max(0, i - n + 1);
+
+                    for (int j = lowerBound; j <= upperBound; j++)
+                    {
+                        wordWindow.Add(words[j]);
+                    }
+
+                    // képezni a részhalmazokat és berakni a resultba
+                    var subSetList = new List<string>();
+                    for (uint bitVector = 1; bitVector < (1u << wordWindow.Count); bitVector++)
+                    {
+                        subSetList.Clear();
+                        
+                        for (int j = 0; j < wordWindow.Count; j++)
+                        {
+                            if ( (bitVector & (1u << j)) != 0 )
+                            {
+                                subSetList.Add(wordWindow[j]);
+                            }
+                        }
+                        
+                        string subSetString = string.Join(" ", subSetList);
+                        if (!result.ContainsKey(subSetString))
+                        {
+                            result.Add(subSetString, new Sequence(subSetString, -1));
+                        }
+                    }
                 }
             }
 
