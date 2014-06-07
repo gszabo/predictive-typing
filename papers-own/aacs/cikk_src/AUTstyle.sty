@@ -1,0 +1,207 @@
+%%*********************************************************************************************
+%% AUTstyle.sty 2010.06.10 version v2.0
+%%
+%% This is the official AUT LaTeX style file for authors of the
+%% Proc. of Automation and Applied Computer Science Workshop
+%%
+%% The latest version of the style file can be obtained
+%% at www.aut.bme.hu/aacs
+%%
+%% NOTE:
+%% use \makeAutStyleTitle command instead of \maketitle command
+%% use \author and \title commands for providing author and title information
+%% use \headerAuthor and \headerTitle commands for providing the short form of the author and title information
+%% that will appear on the header of the pages
+%% use \email command for providing the e-mails of the authors
+%% use \institution command for providing information about the author's institution
+%% use \makeAutBib for creating bibliography, the input of the command are the comma separated file names of the bib files
+%% use the theorem environments defined in this style file
+%**********************************************************************************************
+
+\usepackage[T1]{fontenc}
+\usepackage[latin2]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{exscale}
+\usepackage[mathscr]{eucal}
+\usepackage{bm}
+\usepackage{eqlist} % Makes for a nice list of symbols.
+\usepackage{graphicx}
+\usepackage[dvipsnames]{color}
+\usepackage{algorithm}
+\usepackage[noend]{algorithmic}
+\usepackage{multicol}           % a kethasabos elrendezesert, ami nehol kell
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{makeidx}
+\usepackage{multind}
+\usepackage{ifthen}
+\usepackage{rotfloat}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{esint}
+\usepackage{ifpdf}
+\usepackage{comment}
+\usepackage{amsthm}
+\usepackage{fancyvrb,relsize} %better verbatim block
+\usepackage{dsfont}
+\usepackage{float}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{subfig}
+\usepackage{caption}
+\usepackage{coolstr}
+\usepackage{url}
+
+
+
+
+
+
+\newcommand\keysize{\@setfontsize\keysize\@ixpt\@xpt}
+
+
+
+
+
+%%******************************************************************************************
+%% HEADER and FOOTER
+%%******************************************************************************************
+
+\newcommand{\headerTitle}[1]{\gdef\@headerTitle{#1}}
+\newcommand{\headerAuthor}[1]{\gdef\@headerAuthor{#1}}
+
+
+
+\newcommand{\AUTheader}
+{
+\fancyhead[LO,RE]{\@headerAuthor}
+\fancyhead[LE,RO]{\@headerTitle}
+\fancyhead[CE,CO]{}
+}
+
+\newcommand{\AUTfooter}{
+\fancyfoot{}
+}
+
+%%******************************************************************************************
+%% PAGE LAYOUT SETTINGS
+%%******************************************************************************************
+
+\pagestyle{fancy}
+\fancyhf{}
+\AUTheader
+\AUTfooter
+ \voffset -0.65in
+ \textheight 7.65in
+ \headsep 0.15in
+ \setlength{\oddsidemargin}{0.25in}
+ \setlength{\evensidemargin}{0in}
+
+
+
+
+
+%%******************************************************************************************
+%% COUNTERS
+%%******************************************************************************************
+\newcommand{\autInitializeCounters}{
+\setcounter{theorem}{0}
+\setcounter{algorithm}{0}
+}
+
+
+%%******************************************************************************************
+%% TITLE AND AUTHOR INFORMATION SETTINGS
+%%******************************************************************************************
+\def\@date{}
+\def\email#1{\gdef\@email{#1}}
+\def\institution#1{\gdef\@institution{#1}}
+
+
+\newcommand\makeAutStyleTitle{\cleardoublepage \thispagestyle{plain}\vbox{\hsize\textwidth
+  \linewidth\hsize \vfil \centering
+  \vspace*{0.15in}
+  {\LARGE\bf \@title \par}%    % Title set in \LARGE size.
+  \vskip 20pt                % Vertical space after title.
+  {\large \begin{tabular}[t]{c}\@author \end{tabular}\par}%
+  \vskip 2pt                % Vertical space after authors.
+  {\it \@institution \par}
+  \vskip 2pt                % Vertical space after institution.
+  {\begin{tabular}[t]{c}\@email\end{tabular} \par}
+  \vskip 32pt}
+  \thispagestyle{empty}
+  }
+
+
+%%******************************************************************************************
+%% ABSTRACT ENVIRONMENT
+%%******************************************************************************************
+\renewenvironment{abstract}
+  {\keysize\normalfont\rmfamily
+   \list{}{\leftmargin \z@ \rightmargin\leftmargin
+     \parsep \z@ \@plus 1\p@ \listparindent\parindent}%
+   \item[]{\normalfont\bfseries Abstract.}\enskip\ignorespaces}
+   {\endlist}
+
+%%******************************************************************************************
+%% KEYWORD ENVIRONMENT
+%%******************************************************************************************
+\newenvironment{keywords}
+  {\keysize\normalfont\rmfamily
+   \list{}{\leftmargin \z@ \rightmargin\leftmargin
+     \parsep \z@ \@plus 1\p@}%
+   \item[]{\normalfont\bfseries Keywords:}\enskip\ignorespaces}
+   {\endlist}
+
+%%******************************************************************************************
+%% WIDOW AND ORPHAN CONTROL
+%%******************************************************************************************
+
+\clubpenalty 10000 \widowpenalty 10000
+
+%%******************************************************************************************
+%% THEOREM ENVIRONMENTS
+%%******************************************************************************************
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+
+\newtheorem{cor}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{conj}[theorem]{Conjecture}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{hypo}[theorem]{Hypothesis}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{crit}[theorem]{Criterion}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{prin}[theorem]{Principle}
+\newtheorem{alg}{Algorithm}
+
+
+%%******************************************************************************************
+%% REFERENCING COMMANDS
+%%******************************************************************************************
+
+
+\renewcommand{\figurename}{Figure}
+\renewcommand{\tablename}{Table}
+\newcommand{\equationname}{Eq.}
+\newcommand{\sectionname}{Section}
+
+%%******************************************************************************************
+%% Bibliography
+%%******************************************************************************************
+\newcommand\makeAutBib[1]{
+ \bibliographystyle{ieeetr}
+ \bibliography{#1}
+}

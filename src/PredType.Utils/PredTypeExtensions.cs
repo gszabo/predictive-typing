@@ -167,5 +167,41 @@ namespace PredType.Utils
 
             return result.Values.ToArray();
         }
+
+        public static Sequence[] CollectPairsAndWords(this string line)
+        {
+            var result = new Dictionary<string, Sequence>();
+
+            // először a biztos kifejezéshatárok mentén darabolok ( | karakter)
+            string[] innerStrings = line.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (string innerString in innerStrings)
+            {
+                string[] words = innerString.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                // collect words
+                for (int i = 0; i < words.Length; i++)
+                {
+                    string word = words[i];
+
+                    if (!result.ContainsKey(word))
+                        result.Add(word, new Sequence(word, 1));
+                }
+
+                // collect pairs
+                for (int i = 0; i < words.Length - 1; i++)
+                {
+                    for (int j = i + 1; j < words.Length; j++)
+                    {
+                        string pair = string.Format("{0} {1}", words[i], words[j]);
+
+                        if (!result.ContainsKey(pair))
+                            result.Add(pair, new Sequence(pair, 2));
+                    }                    
+                }
+            }
+
+            return result.Values.ToArray();
+        }
     }
 }

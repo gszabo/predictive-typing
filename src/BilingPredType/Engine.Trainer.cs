@@ -15,12 +15,22 @@ namespace BilingPredType
         {
             private readonly string srcPath, trgPath;
             private readonly TrainParams trainParams;
+            private readonly BatchTrainParams batchTrainParams;
 
             public Trainer(string srcPath, string trgPath, TrainParams trainParams)
             {
                 this.srcPath = srcPath;
                 this.trgPath = trgPath;
                 this.trainParams = trainParams;
+                this.batchTrainParams = null;
+            }
+
+            public Trainer(string srcPath, string trgPath, BatchTrainParams batchTrainParams)
+            {
+                this.srcPath = srcPath;
+                this.trgPath = trgPath;
+                this.trainParams = null;
+                this.batchTrainParams = batchTrainParams;
             }
 
             #region train variables
@@ -29,13 +39,123 @@ namespace BilingPredType
 
             private Dictionary<Sequence, int> srcCounter, trgCounter;
 
-            private Dictionary<SequencePair, int> togetherCounter;
+            //private Dictionary<SequencePair, int> togetherCounter;
+            //private Dictionary<int, int> togetherCounter;
+            private Dictionary<int, Dictionary<int, int>> togetherCounter; 
 
             private Dictionary<Sequence, List<PossibleTranslation>> possibleTranslations;
 
-            private Dictionary<int, string> srcHashes, trgHashes; 
+            private Dictionary<int, string> srcHashes, trgHashes;
+
+            //private Dictionary<int, int> srcCounter, trgCounter; 
 
             #endregion
+
+            public IEnumerable<Engine> BatchTrain()
+            {
+                foreach (float monolingThreshold in batchTrainParams.MonolingThresholds)
+                {
+                    Console.WriteLine("{1}: Egynyelvű szűrés, küszöb: {0}", monolingThreshold, DateTime.Now);
+                    
+                    // az elején párhuzamosan gyűjtjük a két nyelvből a kifejezéseket
+                    Task tSrc, tTrg;
+
+                    tSrc = Task.Factory.StartNew(() =>
+                    {
+                        using (var srcReader = new StreamReader(srcPath, Encoding.UTF8))
+                        {
+                            lineCnt = 0;
+                            srcCounter = new Dictionary<Sequence, int>();
+
+                            string srcLine;
+
+                            while ((srcLine = srcReader.ReadLine()) != null)
+                            {
+                                lineCnt++;
+
+                                processLineForSequences(srcLine, srcCounter);
+                            }
+                        }
+                    });
+
+                    // sorokat csak a source oldali számol, elvileg egyenlők mindkét fájlban :)
+                    tTrg = Task.Factory.StartNew(() =>
+                    {
+                        using (var trgReader = new StreamReader(trgPath, Encoding.UTF8))
+                        {
+                            trgCounter = new Dictionary<Sequence, int>();
+
+                            string trgLine;
+
+                            while ((trgLine = trgReader.ReadLine()) != null)
+                            {
+                                processLineForSequences(trgLine, trgCounter);
+                            }
+                        }
+                    });
+
+                    Task.WaitAll(tSrc, tTrg);
+
+                    tSrc = tTrg = null;
+
+                    GC.Collect();
+
+                    Console.WriteLine("{0}: Gyűjtés kész, ritkák szűrése", DateTime.Now);
+
+                    filterRare(monolingThreshold);
+
+                    GC.Collect();
+
+                    Console.WriteLine("{0}: Együttes előfordulás számolás elkezdése", DateTime.Now);
+
+                    // együttes előfordulások számolása
+                    //togetherCounter = new Dictionary<SequencePair, int>();
+                    //togetherCounter = new Dictionary<int, int>();
+                    togetherCounter = new Dictionary<int, Dictionary<int, int>>();
+                    using (var srcReader = new StreamReader(srcPath, Encoding.UTF8))
+                    using (var trgReader = new StreamReader(trgPath, Encoding.UTF8))
+                    {
+                        string srcLine, trgLine;
+
+                        while ((srcLine = srcReader.ReadLine()) != null &&
+                               (trgLine = trgReader.ReadLine()) != null)
+                        {
+                            processLinePairForCorrelation(srcLine, trgLine);
+                        }
+                    }
+
+                    Console.WriteLine("{0}: Együttes előfordulások megszámolva, szótárak készítése", DateTime.Now);
+
+                    foreach (float minScore in batchTrainParams.MinScores)
+                    {
+                        Console.WriteLine("{1}: Szótár készítés, minScore: {0}", minScore, DateTime.Now);
+
+                        possibleTranslations = new Dictionary<Sequence, List<PossibleTranslation>>();
+
+                        createDictionary(minScore);
+
+                        var bilingPredDict = new BilingPredDict();
+                        bilingPredDict.ItemCount = (ulong)possibleTranslations.Count;
+                        bilingPredDict.DictItems = new List<DictItem>();
+                        foreach (var possibleTranslation in possibleTranslations)
+                        {
+                            List<PossibleTranslation> list = possibleTranslation.Value;
+                            list.Sort((translation, translation1) =>
+                                translation1.Score.CompareTo(translation.Score));
+
+                            bilingPredDict.DictItems.Add(new DictItem()
+                            {
+                                SrcHash = possibleTranslation.Key.Text.GetHashCode(),
+                                PossibleTranslations = list
+                            });
+                        }
+                        //bilingPredDict.SourceHashResolver = srcHashes;
+                        bilingPredDict.TargetHashResolver = trgHashes;
+
+                        yield return new Engine(bilingPredDict, false, monolingThreshold, minScore);
+                    }                    
+                }                
+            }
 
             public Engine Train()
             {
@@ -82,14 +202,16 @@ namespace BilingPredType
 
                 Console.WriteLine("Gyűjtés kész, ritkák szűrése");
 
-                filterRare();
+                filterRare(trainParams.MonolingThreshold);
 
                 GC.Collect();
 
                 Console.WriteLine("Együttes előfordulás elkezdése");
 
                 // együttes előfordulások számolása
-                togetherCounter = new Dictionary<SequencePair, int>();
+                //togetherCounter = new Dictionary<SequencePair, int>();
+                //togetherCounter = new Dictionary<int, int>();
+                togetherCounter = new Dictionary<int, Dictionary<int, int>>();
                 using (var srcReader = new StreamReader(srcPath, Encoding.UTF8))
                 using (var trgReader = new StreamReader(trgPath, Encoding.UTF8))
                 {
@@ -104,7 +226,7 @@ namespace BilingPredType
 
                 possibleTranslations = new Dictionary<Sequence, List<PossibleTranslation>>();
 
-                createDictionary();
+                createDictionary(trainParams.MinScore);
 
                 var bilingPredDict = new BilingPredDict();
                 bilingPredDict.ItemCount = (ulong)possibleTranslations.Count;
@@ -129,7 +251,7 @@ namespace BilingPredType
 
             private void processLineForSequences(string line, Dictionary<Sequence, int> counter)
             {
-                Sequence[] sequences = line.CollectAllSubsetsOfN(4);
+                Sequence[] sequences = line.CollectNGrams(Program.WordNum);
                 //Sequence[] sequences = line.CollectWords();
                 foreach (Sequence sequence in sequences)
                 {
@@ -140,67 +262,65 @@ namespace BilingPredType
                 }
             }
 
-            //private void processLinePairForSequences(string srcLine, string trgLine)
-            //{
-            //    Task tSrc, tTrg;
-
-            //    tSrc = Task.Factory.StartNew(() =>
-            //        {
-            //            Sequence[] srcSequences = srcLine.CollectSequences();
-            //            foreach (Sequence sequence in srcSequences)
-            //            {
-            //                if (!srcCounter.ContainsKey(sequence))
-            //                    srcCounter[sequence] = 1;
-            //                else
-            //                    srcCounter[sequence]++;
-            //            }
-            //        });
-
-            //    tTrg = Task.Factory.StartNew(() =>
-            //    {
-            //        Sequence[] trgSequences = trgLine.CollectSequences();
-            //        foreach (Sequence sequence in trgSequences)
-            //        {
-            //            if (!trgCounter.ContainsKey(sequence))
-            //                trgCounter[sequence] = 1;
-            //            else
-            //                trgCounter[sequence]++;
-            //        }
-            //    });
-
-            //    Task.WaitAll(tSrc, tTrg);
-            //}
-
             private void processLinePairForCorrelation(string srcLine, string trgLine)
             {
-                Sequence[] srcSequences = srcLine.CollectAllSubsetsOfN(4);
-                Sequence[] trgSequences = trgLine.CollectAllSubsetsOfN(4);
-                //Sequence[] srcSequences = srcLine.CollectWords();
-                //Sequence[] trgSequences = trgLine.CollectWords();
-
+                Sequence[] srcSequences = srcLine.CollectNGrams(Program.WordNum);
+                Sequence[] trgSequences = trgLine.CollectNGrams(Program.WordNum);
+                
                 foreach (Sequence srcSequence in srcSequences)
                 {
                     foreach (Sequence trgSequence in trgSequences)
                     {
                         if (srcCounter.ContainsKey(srcSequence) && trgCounter.ContainsKey(trgSequence))
                         {
-                            // ez egy fájdalmas sor
-                            SequencePair pair = SequencePair.GetOrCreate(srcSequence, trgSequence);
-                            if (togetherCounter.ContainsKey(pair))
-                                togetherCounter[pair]++;
+                            //unchecked
+                            //{
+                            //    // hash SequencePair helyett memóriatakarékosságból
+                            //    int pairHash = (srcSequence.GetHashCode() * 397) ^ (trgSequence.GetHashCode());
+                            //    if (togetherCounter.ContainsKey(pairHash))
+                            //        togetherCounter[pairHash]++;
+                            //    else
+                            //        togetherCounter[pairHash] = 1; 
+                            //}
+                            
+                            // SequencePair-es változat
+                            //var pair = new SequencePair(srcSequence, trgSequence);
+                            //if (togetherCounter.ContainsKey(pair))
+                            //    togetherCounter[pair]++;
+                            //else
+                            //    togetherCounter[pair] = 1;
+
+                            // dupla hashtáblás változat
+                            int srcHash = srcSequence.GetHashCode(), trgHash = trgSequence.GetHashCode();
+                            Dictionary<int, int> srcList;
+                            if (togetherCounter.TryGetValue(srcHash, out srcList))
+                            {
+                                if (srcList.ContainsKey(trgHash))
+                                {
+                                    srcList[trgHash]++;
+                                }
+                                else
+                                {
+                                    srcList[trgHash] = 1;
+                                }
+                            }
                             else
-                                togetherCounter[pair] = 1;
+                            {
+                                srcList = new Dictionary<int, int>();
+                                srcList[trgHash] = 1;
+                                togetherCounter.Add(srcHash, srcList);
+                            }
                         }
                     }
                 }
             }
 
-            // ritkák szűrése
-            private void filterRare()
+            // ritkák szűrése egy nyelv szintjén
+            private void filterRare(float monolingThreshold)
             {
-                if (trainParams.MonolingThreshold > 0.0005f)
+                if (monolingThreshold > 0.0005f)
                 {
-                    int minOccur = (int)(lineCnt * trainParams.MonolingThreshold);
+                    int minOccur = (int)(lineCnt * monolingThreshold);
 
                     var removeSrc = srcCounter.Where(pair => pair.Value < minOccur).Select(pair => pair.Key).ToList();
                     foreach (Sequence sequence in removeSrc)
@@ -219,7 +339,7 @@ namespace BilingPredType
             }
 
 
-            private void createDictionary()
+            private void createDictionary(float minScore)
             {
                 srcHashes = new Dictionary<int, string>();
                 trgHashes = new Dictionary<int, string>();
@@ -229,13 +349,34 @@ namespace BilingPredType
                 {
                     foreach (Sequence trgSequence in trgCounter.Keys)
                     {
-                        var pair = SequencePair.GetOrCreate(srcSequence, trgSequence);
-
                         int n11;
 
+                        //unchecked
+                        //{
+                        //    int pairHash = (srcSequence.GetHashCode() * 397) ^ (trgSequence.GetHashCode());
+                        //    // ha együtt nem szerepelnek, nem is kerülhetnek a szótárba
+                        //    if (!togetherCounter.TryGetValue(pairHash, out n11))
+                        //        continue; 
+                        //}
+
+                        // SequencePair-es változat
+                        // var pair = new SequencePair(srcSequence, trgSequence);
                         // ha együtt nem szerepelnek, nem is kerülhetnek a szótárba
-                        if (!togetherCounter.TryGetValue(pair, out n11))
+                        //if (!togetherCounter.TryGetValue(pair, out n11))
+                        //    continue;
+
+                        // dupla hashtáblás változat
+                        int srcHash = srcSequence.GetHashCode(), trgHash = trgSequence.GetHashCode();
+                        Dictionary<int, int> srcList;
+                        if (!togetherCounter.TryGetValue(srcHash, out srcList))
+                        {
                             continue;
+                        }
+
+                        if (!srcList.TryGetValue(trgHash, out n11))
+                        {
+                            continue;
+                        }
 
                         int npp = lineCnt, n1p = srcCounter[srcSequence], np1 = trgCounter[trgSequence];
 
@@ -247,7 +388,7 @@ namespace BilingPredType
 
                         float score = calcScore(ct);
 
-                        if (score > trainParams.MinScore)
+                        if (score > minScore)
                         {
                             //srcHashes[srcSequence.Text.GetHashCode()] = srcSequence.Text;
                             trgHashes[trgSequence.Text.GetHashCode()] = trgSequence.Text;
@@ -256,10 +397,10 @@ namespace BilingPredType
                                 possibleTranslations[srcSequence] = new List<PossibleTranslation>();
 
                             possibleTranslations[srcSequence].Add(new PossibleTranslation()
-                                {
-                                    Score = score,
-                                    TranslationHash = trgSequence.Text.GetHashCode()
-                                });
+                            {
+                                Score = score,
+                                TranslationHash = trgSequence.Text.GetHashCode()
+                            });
                         }
                     }
                 }
@@ -285,7 +426,7 @@ namespace BilingPredType
 
                 public Sequence TrgSequence { get; private set; }
 
-                private SequencePair(Sequence srcSequence, Sequence trgSequence)
+                public SequencePair(Sequence srcSequence, Sequence trgSequence)
                 {
                     SrcSequence = srcSequence;
                     TrgSequence = trgSequence;
@@ -364,5 +505,12 @@ namespace BilingPredType
         public float MonolingThreshold;
 
         public float MinScore;
+    }
+
+    class BatchTrainParams // for each monolingh threshold every minscore
+    {
+        public float[] MonolingThresholds;
+
+        public float[] MinScores;
     }
 }

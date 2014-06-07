@@ -17,13 +17,21 @@ namespace BilingPredType
 
         public BilingPredDict Dictionary { get { return dict; } }
 
-        private Dictionary<int, DictItem> lookupDict; 
+        private Dictionary<int, DictItem> lookupDict;
 
-        private Engine(BilingPredDict dict)
+        public float MinThreshold, MinScore;
+
+        private Engine(BilingPredDict dict, bool doCreateLookupDict = false, float minThreshold = 0.0f, float minScore = 0.0f)
         {
             this.dict = dict;
 
-            createLookupDict();
+            this.MinThreshold = minThreshold;
+            this.MinScore = minScore;
+
+            if (doCreateLookupDict)
+            {
+                createLookupDict();
+            }
         }
 
         private void createLookupDict()
@@ -41,7 +49,7 @@ namespace BilingPredType
             {
                 IFormatter formatter = new BinaryFormatter();
                 var dict = (BilingPredDict) formatter.Deserialize(fs);
-                return new Engine(dict);
+                return new Engine(dict, true);
             }
         }
 
@@ -132,7 +140,7 @@ namespace BilingPredType
 
         public LookupHit[] Lookup(string srcText)
         {
-            Sequence[] sequences = srcText.CollectAllSubsetsOfN(4);
+            Sequence[] sequences = srcText.CollectNGrams(Program.WordNum);
             //Sequence[] sequences = srcText.CollectWords();
 
             var result = new Dictionary<string, LookupHit>();
