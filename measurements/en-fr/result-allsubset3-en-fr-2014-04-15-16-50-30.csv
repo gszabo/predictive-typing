@@ -1,0 +1,2 @@
+﻿MinThreshold;MinScore;TrainTime;EvalTime;EvalSentenceCnt;AvgSentenceLength;AvgKeyStrokeSave;AvgCoverage;DbSizeInKb;DbSrcEntryCount;DbAllEntryCount
+0,001;0,3;10:16;00:10;20000;159,4151;0,2718323;0;614;3097;9862

@@ -1,0 +1,2 @@
+﻿RareWordFreq;SeqThreshold;TrainTime;LookupWords;LookupSeq;EvalTime;EvalSentenceCnt;AvgSentenceLength;AvgKeyStrokeSave;AvgCoverage;DbSizeInKb
+0;0,005;00:16;50;50;01:05;20000;165,8853;95,767;0,8842008;2124
