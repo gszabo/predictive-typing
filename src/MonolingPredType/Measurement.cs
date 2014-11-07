@@ -19,5 +19,7 @@ namespace MonolingPredType
         public TimeSpan EvaluationTime;
 
         public long DbSizeInKb;
+
+        public long EnryNum;
     }
 }

@@ -433,94 +433,94 @@ namespace BilingPredType
 
         static void batchDoForLangPair(string src, string trg)
         {
-            string folder = Path.Combine(rootFolder, src + "-" + trg);
+            //string folder = Path.Combine(rootFolder, src + "-" + trg);
 
-            string trainSrc = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.train", src, trg, src));
-            string trainTrg = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.train", src, trg, trg));
-            string evalSrc = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.eval", src, trg, src));
-            string evalTrg = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.eval", src, trg, trg));
+            //string trainSrc = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.train", src, trg, src));
+            //string trainTrg = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.train", src, trg, trg));
+            //string evalSrc = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.eval", src, trg, src));
+            //string evalTrg = Path.Combine(folder, string.Format("Europarl.{0}-{1}.{2}.eval", src, trg, trg));
 
-            string dateString = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+            //string dateString = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
 
-            string trainResultPath = Path.Combine(folder, "trainResult-" + WordNum + "gram-" + src + "-" + trg + "-" + dateString + ".csv");
-            string evalResultPath = Path.Combine(folder, "evalResult-" + WordNum + "gram-" + src + "-" + trg + "-" + dateString + ".csv");
+            //string trainResultPath = Path.Combine(folder, "trainResult-" + WordNum + "gram-" + src + "-" + trg + "-" + dateString + ".csv");
+            //string evalResultPath = Path.Combine(folder, "evalResult-" + WordNum + "gram-" + src + "-" + trg + "-" + dateString + ".csv");
 
-            float[] thresholds = { 1e-3f };
-            float[] minScores = { 0.3f, 0.25f, 0.2f, 0.15f, 0.1f, 5e-2f, 4e-2f, 3e-2f, 2e-2f, 1.5e-2f, 1e-2f, 9e-3f, 8e-3f, 7e-3f, 6e-3f, 5.5e-3f, 5e-3f };
+            //float[] thresholds = { 1e-3f };
+            //float[] minScores = { 0.3f, 0.25f, 0.2f, 0.15f, 0.1f, 5e-2f, 4e-2f, 3e-2f, 2e-2f, 1.5e-2f, 1e-2f, 9e-3f, 8e-3f, 7e-3f, 6e-3f, 5.5e-3f, 5e-3f };
 
-            Console.WriteLine("\n\nStarting for lang pair {0}-{1}.", src, trg);
+            //Console.WriteLine("\n\nStarting for lang pair {0}-{1}.", src, trg);
 
-            // batch train kör
-            var btp = new BatchTrainParams();
-            btp.MonolingThresholds = thresholds;
-            btp.MinScores = minScores;
+            //// batch train kör
+            ////var btp = new BatchTrainParams();
+            ////btp.MonolingThresholds = thresholds;
+            ////btp.MinScores = minScores;
 
-            var dbFilePaths = new List<string>(thresholds.Length * minScores.Length);
+            //var dbFilePaths = new List<string>(thresholds.Length * minScores.Length);
 
-            Stopwatch sw = new Stopwatch();
+            //Stopwatch sw = new Stopwatch();
 
-            IEnumerable<Engine> engines = new Engine.Trainer(trainSrc, trainTrg, btp).BatchTrain();
+            ////IEnumerable<Engine> engines = new Engine.Trainer(trainSrc, trainTrg, btp).BatchTrain();
 
-            IEnumerator<Engine> engineEnumerator = engines.GetEnumerator();
-            int i = 0;
-            sw.Start();
+            ////IEnumerator<Engine> engineEnumerator = engines.GetEnumerator();
+            //int i = 0;
+            //sw.Start();
 
-            while (engineEnumerator.MoveNext())
-            {
-                Engine e = engineEnumerator.Current;
-                sw.Stop();
+            //while (engineEnumerator.MoveNext())
+            //{
+            //    Engine e = engineEnumerator.Current;
+            //    sw.Stop();
 
-                string dbPath = Path.Combine(folder, "db-" + i + ".dat");
+            //    string dbPath = Path.Combine(folder, "db-" + i + ".dat");
 
-                ulong srcEntryCount = e.Dictionary.ItemCount;
-                ulong allEntryCount = (ulong)e.Dictionary.DictItems.SelectMany(di => di.PossibleTranslations).Count();
-                string fileName = Path.GetFileName(dbPath);
+            //    ulong srcEntryCount = e.Dictionary.ItemCount;
+            //    ulong allEntryCount = (ulong)e.Dictionary.DictItems.SelectMany(di => di.PossibleTranslations).Count();
+            //    string fileName = Path.GetFileName(dbPath);
 
-                e.Save(dbPath);
+            //    e.Save(dbPath);
 
-                long dbSizeInKb = new FileInfo(dbPath).Length / 1024;
+            //    long dbSizeInKb = new FileInfo(dbPath).Length / 1024;
 
-                dbFilePaths.Add(dbPath);
+            //    dbFilePaths.Add(dbPath);
 
-                writeTrainResult(trainResultPath, e.MinThreshold, e.MinScore, sw.Elapsed,
-                                 fileName, dbSizeInKb, srcEntryCount, allEntryCount);
+            //    writeTrainResult(trainResultPath, e.MinThreshold, e.MinScore, sw.Elapsed,
+            //                     fileName, dbSizeInKb, srcEntryCount, allEntryCount);
 
-                e = null;
+            //    e = null;
 
-                GC.Collect();
+            //    GC.Collect();
 
-                i++;
-                sw.Reset();
-                sw.Start();
-            }
+            //    i++;
+            //    sw.Reset();
+            //    sw.Start();
+            //}
 
-            sw.Stop();
-            engines = null;
-            engineEnumerator = null;
+            //sw.Stop();
+            //engines = null;
+            //engineEnumerator = null;
 
-            GC.Collect();
+            //GC.Collect();
 
-            // evaluation kör
-            foreach (string dbFilePath in dbFilePaths)
-            {
-                string fileName = Path.GetFileName(dbFilePath);
-                sw.Reset();
-                sw.Start();
-                Engine e = Engine.Load(dbFilePath);
-                sw.Stop();
-                Console.WriteLine("\n\n{1}: Starting evaluating for {0}.", fileName, DateTime.Now);
+            //// evaluation kör
+            //foreach (string dbFilePath in dbFilePaths)
+            //{
+            //    string fileName = Path.GetFileName(dbFilePath);
+            //    sw.Reset();
+            //    sw.Start();
+            //    Engine e = Engine.Load(dbFilePath);
+            //    sw.Stop();
+            //    Console.WriteLine("\n\n{1}: Starting evaluating for {0}.", fileName, DateTime.Now);
 
-                Evaluator eval = new Evaluator(evalSrc, evalTrg, e);
-                EvalResult evalResult = eval.Evaluate();
+            //    Evaluator eval = new Evaluator(evalSrc, evalTrg, e);
+            //    EvalResult evalResult = eval.Evaluate();
 
-                writeEvalResult(evalResultPath, fileName, evalResult, sw.Elapsed);
+            //    writeEvalResult(evalResultPath, fileName, evalResult, sw.Elapsed);
 
-                GC.Collect();
+            //    GC.Collect();
 
-                Console.WriteLine("{0}: Evaluation finished", DateTime.Now);
-            }
+            //    Console.WriteLine("{0}: Evaluation finished", DateTime.Now);
+            //}
 
-            Console.WriteLine("Done for lang pair {0}-{1}.", src, trg);
+            //Console.WriteLine("Done for lang pair {0}-{1}.", src, trg);
         }
 
         static void writeTrainResult(string path, 

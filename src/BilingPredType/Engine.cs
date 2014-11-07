@@ -11,7 +11,7 @@ using PredType.Utils;
 
 namespace BilingPredType
 {
-    partial class Engine
+    public partial class Engine
     {
         private readonly BilingPredDict dict;
 
@@ -21,7 +21,7 @@ namespace BilingPredType
 
         public float MinThreshold, MinScore;
 
-        private Engine(BilingPredDict dict, bool doCreateLookupDict = false, float minThreshold = 0.0f, float minScore = 0.0f)
+        internal Engine(BilingPredDict dict, bool doCreateLookupDict = false, float minThreshold = 0.0f, float minScore = 0.0f)
         {
             this.dict = dict;
 

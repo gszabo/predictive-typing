@@ -20,6 +20,11 @@ namespace MonolingPredType
             this.dictionary = dictionary;
         }
 
+        public ulong GetEntryCount()
+        {
+            return dictionary.ItemCount;
+        }
+
         public void Save(string path)
         {
             using (FileStream fs = File.Open(path, FileMode.Create, FileAccess.Write))
@@ -185,6 +190,37 @@ namespace MonolingPredType
 
         public class Trainer
         {
+            public static Engine Filter(CollectionResult collectionResult, float threshold)
+            {
+                // most nincs megkülönböztetés szó és bi-trigram között, egyformán szűrünk
+                ulong minOccur = (ulong)(collectionResult.NumOfSentences * threshold);
+
+                // clone the dictionary so the original cna be used later again
+                var counters = new Dictionary<string, ulong>(collectionResult.Counters);
+
+                var dropOutKeys = counters.Where(pair => pair.Value < minOccur).Select(pair => pair.Key).ToList();
+
+                foreach (string dropOutKey in dropOutKeys)
+                {
+                    counters.Remove(dropOutKey);
+                }
+
+                dropOutKeys = null;
+
+                PredDict dict = new PredDict();
+
+                dict.ItemCount = (ulong)counters.Count;
+                dict.Items = counters.Select(pair =>
+                                                 new DictItem()
+                                                 {
+                                                     //Occurrence = pair.Key.Count(char.IsWhiteSpace) > 0 ? pair.Value * (ulong)pair.Key.Length : pair.Value,
+                                                     Occurrence = pair.Value,
+                                                     Str = pair.Key
+                                                 }).ToList();
+
+                return new Engine(dict);
+            }
+
             public class TrainParams
             {
                 public float MinThreshold;

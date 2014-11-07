@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PredType.Utils;
 
 namespace MonolingPredType
 {
@@ -21,12 +22,18 @@ namespace MonolingPredType
 
         private readonly Engine engine;
 
+        private readonly string[] evalMetrics;
+
+        private readonly Logger logger;
+
         //private readonly LookupParams lParams;
 
-        public Evaluator(string evalPath, Engine engine)
+        public Evaluator(string evalPath, Engine engine, string[] evalMetrics, Logger logger)
         {
             this.evalPath = evalPath;
             this.engine = engine;
+            this.evalMetrics = evalMetrics;
+            this.logger = logger;
             //this.lParams = lParams;
         }
 
@@ -35,27 +42,47 @@ namespace MonolingPredType
             ulong lineCnt = 0, sumSentenceLen = 0;
             float sumCoverage = 0.0f, sumSavedKeyStroke = 0.0f;
 
+            bool measureKss = evalMetrics.Contains("kss"), measureCoverage = evalMetrics.Contains("coverage");
+
             using (var rdr = new StreamReader(evalPath, Encoding.UTF8))
             {
-                string line;
-                while ((line = rdr.ReadLine()) != null)
+                string srcSentence = null, trgSentence = null, errorMsg = null;
+                bool isEndOfFile = false, quit = false;
+
+                while (!quit)
                 {
-                    lineCnt++;
+                    quit = !LinePairReader.ReadLinePair(rdr, ref srcSentence, ref trgSentence, ref errorMsg, ref isEndOfFile);
 
-                    sumSentenceLen += (ulong)line.Length;
+                    if (!quit)
+                    {
+                        lineCnt++;
+                        sumSentenceLen += (ulong)trgSentence.Length;
 
-                    if ((lineCnt % 200) == 0)
-                        Console.WriteLine(lineCnt);
+                        if ((lineCnt % 200) == 0)
+                            Console.WriteLine(lineCnt);
 
-                    //sumCoverage += calcCoverageForLine(line/*, out savedStroke*/);
-                    sumSavedKeyStroke += calcKeyStrokeRatio(line);
+                        if (measureCoverage)
+                        {
+                            sumCoverage += calcCoverageForLine(trgSentence/*, out savedStroke*/);
+                        }
+
+                        if (measureKss)
+                        {
+                            sumSavedKeyStroke += calcKeyStrokeRatio(trgSentence);
+                        }
+                    }
+                    else if (!isEndOfFile)
+                    {
+                        // error
+                        logger.Log("Error in " + evalPath + ". " + errorMsg + " Read sentences: " + lineCnt);
+                    }
                 }
             }
 
             return new EvalResult()
                 {
                     EvalSentenceCount = lineCnt,
-                    //AvgCoverage = sumCoverage/lineCnt,
+                    AvgCoverage = sumCoverage/lineCnt,
                     AvgKeyStrokeSave = (sumSavedKeyStroke)/lineCnt,
                     AvgSentenceLength = ((float)sumSentenceLen)/lineCnt
                 };
@@ -346,7 +373,8 @@ namespace MonolingPredType
                         }
                         catch (ArgumentOutOfRangeException e)
                         {
-                            Logger.Create(Path.GetDirectoryName(evalPath)).Log(
+                            //Logger.Create(Path.GetDirectoryName(evalPath)).Log(
+                            logger.Log(
                                 string.Format("------\nTarget string: {0}\nMatch: {1}\n------", line, chosenCompletion));
                             //savedStroke = 0;
                             return 0.0f;

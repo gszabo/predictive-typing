@@ -506,11 +506,4 @@ namespace BilingPredType
 
         public float MinScore;
     }
-
-    class BatchTrainParams // for each monolingh threshold every minscore
-    {
-        public float[] MonolingThresholds;
-
-        public float[] MinScores;
-    }
 }

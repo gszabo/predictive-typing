@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BilingPredType
 {
-    class Evaluator
+    public class Evaluator
     {
         private readonly string srcPath, trgPath;
 
@@ -313,7 +313,7 @@ namespace BilingPredType
         }
     }
 
-    class EvalResult
+    public class EvalResult
     {
         public TimeSpan EvalTime;
         public uint SentenceCount;
